@@ -6,6 +6,8 @@ import streamlit as st
 
 from backend.simulation import SWITCH_TYPES, run_comparison, run_simulation
 from experiments.run_experiments import ROOT, TRAFFIC_RATES, run_all_experiments
+from backend.application_simulation import run_application_experiment
+from experiments.run_application_experiments import run_application_experiments
 
 
 st.set_page_config(page_title="SWITCHBENCH", page_icon="⌁", layout="wide")
@@ -68,10 +70,24 @@ with st.sidebar:
     run_one = st.button("RUN SIMULATION", use_container_width=True)
     run_compare = st.button("RUN COMPARISON", use_container_width=True)
     run_full = st.button("RUN FULL EXPERIMENT", use_container_width=True)
+    st.divider()
+    st.subheader("Application traffic")
+    application = st.selectbox("Application", ["voice", "file", "interactive"],
+                               format_func=lambda x: {"voice": "Voice", "file": "File transfer",
+                                                      "interactive": "Interactive"}[x])
+    if application == "voice":
+        app_load = st.slider("Concurrent voice calls", 1, 200, 50)
+    elif application == "file":
+        app_load = st.slider("Background voice calls", 0, 100, 20)
+    else:
+        app_load = st.slider("Interactive users", 1, 50, 10)
+    app_duration = st.number_input("Application duration (s)", min_value=1.0, value=5.0)
+    app_run = st.button("RUN APPLICATION TEST", use_container_width=True)
+    app_full = st.button("RUN ALL APPLICATION EXPERIMENTS", use_container_width=True)
 
 params = dict(traffic_rate=rate, packet_size=size, bandwidth=bandwidth,
               queue_capacity=capacity, simulation_duration=duration)
-tabs = st.tabs(["Single Simulation", "Comparison", "Experiments"])
+tabs = st.tabs(["Single Simulation", "Comparison", "Experiments", "Application Experiments"])
 
 with tabs[0]:
     single_signature = (kind, *params.values())
@@ -165,3 +181,40 @@ with tabs[2]:
                 col.image(str(image_path), caption=caption, use_container_width=True)
             else:
                 col.info(f"{filename} will be generated when you run the full experiment.")
+
+
+with tabs[3]:
+    st.subheader("Application-specific traffic experiments")
+    app_signature = (application, app_load, kind, bandwidth, capacity, app_duration)
+    if app_run or st.session_state.get("app_signature") != app_signature:
+        st.session_state.app_result = run_application_experiment(
+            application, app_load, kind, bandwidth=bandwidth, queue_capacity=capacity,
+            duration=app_duration)
+        st.session_state.app_signature = app_signature
+    app_result = st.session_state.app_result
+    app_metrics = [
+        "packets_generated", "packets_delivered", "packets_lost",
+        "average_end_to_end_delay", "p95_end_to_end_delay", "jitter",
+        "call_blocking_probability", "file_completion_time", "goodput_bps",
+        "average_response_time", "p95_response_time", "setup_time",
+    ]
+    st.write(f"**Application:** {application.title()} | **Switching model:** {MODEL_LABELS[kind]} | **Load:** {app_load}")
+    st.dataframe(pd.DataFrame({"Metric": app_metrics, "Value": [app_result[k] for k in app_metrics]}),
+                 hide_index=True, use_container_width=True)
+    if app_full:
+        with st.spinner("Running all application load sweeps and generating CSV files and graphs…"):
+            generated_path = run_application_experiments(
+                bandwidth=bandwidth, queue_capacity=capacity, duration=app_duration)
+        st.success(f"Application experiment CSV created: {generated_path.relative_to(ROOT)}")
+    app_csv = ROOT / "results" / f"{application}_experiments.csv"
+    if app_csv.exists():
+        st.download_button("Download this application's experiment CSV",
+                           app_csv.read_bytes(), app_csv.name, "text/csv")
+    app_graph_dir = ROOT / "graphs" / "applications"
+    if app_graph_dir.exists():
+        images = sorted(app_graph_dir.glob(f"{application}_*.png"))
+        for offset in range(0, len(images), 2):
+            cols = st.columns(2)
+            for col, image_path in zip(cols, images[offset:offset + 2]):
+                col.image(str(image_path), caption=image_path.stem.replace("_", " ").title(),
+                          use_container_width=True)
