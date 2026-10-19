@@ -96,4 +96,4 @@ These are simplified educational experiments, not a full TCP/IP implementation o
 
 The file experiment models one 5 MB file. Packet and virtual-circuit cases add the selected number of background voice calls. To keep the model simple, the circuit file case gives the file a dedicated circuit after setup and does **not** multiplex the background calls onto that same circuit. Interactive traffic models a 100-byte request and a 500-byte response 10 ms later, with a mean inter-request interval of one second per user. The current model does not implement true packet reordering, TCP congestion control, retransmission, or a complete event queue; `out_of_order_count` is therefore reported as zero rather than claiming reordering that was not simulated.
 
-Do not write that one switching method universally wins. Use the generated results to discuss measured behavior under these assumptions, and explicitly list the limitations in the project report.
+
