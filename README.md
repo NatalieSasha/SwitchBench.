@@ -96,4 +96,14 @@ These are simplified educational experiments, not a full TCP/IP implementation o
 
 The file experiment models one 5 MB file. Packet and virtual-circuit cases add the selected number of background voice calls. To keep the model simple, the circuit file case gives the file a dedicated circuit after setup and does **not** multiplex the background calls onto that same circuit. Interactive traffic models a 100-byte request and a 500-byte response 10 ms later, with a mean inter-request interval of one second per user. The current model does not implement true packet reordering, TCP congestion control, retransmission, or a complete event queue; `out_of_order_count` is therefore reported as zero rather than claiming reordering that was not simulated.
 
+### Future Enhancements
 
+Advanced Network Simulation: Extend the simulator to support dynamic routing, packet reordering, retransmissions, and TCP congestion control for more realistic network behavior.
+
+Dynamic Traffic Generation: Introduce configurable bursty traffic patterns and varying packet sizes to study network performance under different workload conditions.
+
+Scalability and Topology Support: Allow users to define custom network topologies with multiple routers, links, and alternative paths to evaluate switching performance in more complex networks.
+
+Real-Time Performance Visualization: Enhance the dashboard with live queue monitoring, link utilization graphs, and packet-flow visualization during simulation.
+
+Validation Against Established Simulators: Compare results with established network simulators such as ns-3 to evaluate the accuracy and limitations of the simplified models.
