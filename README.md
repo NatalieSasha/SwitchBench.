@@ -63,3 +63,37 @@ requirements.txt
 ```
 
 Results are generated at run time from the simulator; no experimental values are embedded in the project.
+
+
+## Application-specific experiments (added)
+
+The application experiment layer adds traffic patterns for voice, file transfer, and interactive request/response workloads.
+
+- `backend/applications.py`: deterministic voice, file, and interactive packet generators.
+- `backend/application_simulation.py`: application-level metrics and the simplified comparison model.
+- `experiments/run_application_experiments.py`: load sweeps, per-application CSV files, and graphs.
+- `frontend/app.py`: an **Application Experiments** tab with an application selector and controls.
+
+Run from the project root in PowerShell:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m experiments.run_application_experiments
+```
+
+Generated files:
+- `results/voice_experiments.csv`
+- `results/file_experiments.csv`
+- `results/interactive_experiments.csv`
+- `results/application_experiments.csv`
+- `graphs/applications/` (PNG graphs)
+
+The default sweeps are voice calls `[10, 25, 50, 100, 125, 150, 200]`, file transfer with `[0, 10, 25, 50, 100]` background voice calls, and interactive users `[1, 5, 10, 25, 50]`. Each load is run for packet, circuit, and virtual-circuit switching.
+
+### Model assumptions and interpretation
+
+These are simplified educational experiments, not a full TCP/IP implementation or a calibrated network simulator. Voice uses 200-byte packets every 20 ms (160-byte payload plus 40 bytes of assumed headers), equivalent to 80 kb/s per call. Circuit voice admission reserves 80 kb/s per admitted call, so the theoretical call capacity is `floor(link bandwidth / 80,000)`. Circuit voice delay is fixed in this model and admitted calls have zero modeled jitter. Packet and virtual-circuit traffic use shared link-availability clocks and a waiting-time-based queue overflow approximation.
+
+The file experiment models one 5 MB file. Packet and virtual-circuit cases add the selected number of background voice calls. To keep the model simple, the circuit file case gives the file a dedicated circuit after setup and does **not** multiplex the background calls onto that same circuit. Interactive traffic models a 100-byte request and a 500-byte response 10 ms later, with a mean inter-request interval of one second per user. The current model does not implement true packet reordering, TCP congestion control, retransmission, or a complete event queue; `out_of_order_count` is therefore reported as zero rather than claiming reordering that was not simulated.
+
+Do not write that one switching method universally wins. Use the generated results to discuss measured behavior under these assumptions, and explicitly list the limitations in the project report.
